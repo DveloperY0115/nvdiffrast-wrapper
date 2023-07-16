@@ -14,14 +14,26 @@ from typeguard import typechecked
 class Mesh:
     """A mesh"""
 
-    vertices: Float[Tensor, "1 num_vertex 3"] = None
+    vertices: Float[Tensor, "num_vertex 3"] = None
     """The vertices of the mesh"""
     faces: Int[Tensor, "num_face 3"] = None
     """The faces of the mesh"""
-    # TODO: Extend the class to support range mode in nvdiffrast
-    # TODO: Extend the class to support various attributes
-    vertex_colors: Float[Tensor, "1 num_vertex 3"] = None
+    vertex_colors: Float[Tensor, "num_vertex 3"] = None
     """The vertex colors of the mesh"""
+    tex_coordinates: Float[Tensor, "num_vertex 2"] = None
+    """The texture coordinates of the mesh"""
+    vertex_normals: Float[Tensor, "num_vertex 3"] = None
+    """The vertex normals of the mesh"""
+    tex_coordinate_indices: Int[Tensor, "num_face 3"] = None
+    """The texture indices of the mesh"""
+    vertex_normal_indices: Int[Tensor, "num_face 3"] = None
+    """The vertex normal indices of the mesh"""
+    texture_image: Float[Tensor, "texture_height texture_width 3"] = None
+    """The texture image of the mesh"""
+    has_texture: bool = False
+    """A flag that indicates whether the mesh has a texture"""
+    has_normal: bool = False
+    """A flag that indicates whether the mesh has vertex normals"""
     device: torch.device = torch.device("cuda")
     """The device where the mesh resides"""
 

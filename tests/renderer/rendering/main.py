@@ -1,7 +1,7 @@
 """
 main.py
 
-A script for running unit tests for perspective camera.
+A script for running unit tests for renderer.
 """
 
 from dataclasses import dataclass, field
@@ -10,7 +10,8 @@ from typing import Type
 from tests.base_test import TestConfig, Test
 from tests.renderer.rendering.optimize_cube import optimize_cube
 from tests.renderer.rendering.render_cube import render_cube
-
+from tests.renderer.rendering.render_spot import render_spot
+from tests.renderer.rendering.render_teapot import render_teapot
 
 @dataclass
 class RendererTestConfig(TestConfig):
@@ -30,6 +31,8 @@ def main():
     test_config = RendererTestConfig(
         test_cases=[
             render_cube,
+            render_spot,
+            render_teapot,
             optimize_cube,
         ],
     )

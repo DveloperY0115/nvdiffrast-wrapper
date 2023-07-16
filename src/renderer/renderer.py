@@ -51,13 +51,13 @@ class Renderer:
     @typechecked
     def render(
         self,
-        meshes: Mesh,
+        mesh: Mesh,
         camera: PerspectiveCamera,
     ) -> Tuple[
-        Float[Tensor, "batch_size image_height image_width 3"],
+        Float[Tensor, "image_height image_width 3"],
         Union[
-            Float[Tensor, "batch_size image_height image_width 4"],
-            Float[Tensor, "batch_size image_height image_width 0"],
+            Float[Tensor, "image_height image_width 4"],
+            Float[Tensor, "image_height image_width 0"],
         ],
     ]:
         """
@@ -66,42 +66,52 @@ class Renderer:
 
         # assertions
         assert self.device == camera.device, f"{self.device} != {camera.device}"
-        assert self.device == meshes.device, f"{self.device} != {meshes.device}"
-
+        assert self.device == mesh.device, f"{self.device} != {mesh.device}"
         image_height, image_width = int(camera.image_height), int(camera.image_width)
-        vertices = meshes.vertices
-        faces = meshes.faces
-        vertex_colors = meshes.vertex_colors
-        projection_matrix = camera.projection_matrix
-        view_matrix = camera.camera_to_world
 
-        # transformation to clip space
         vertices_clip = self.apply_view_projection_matrices(
-            vertices,
-            view_matrix,
-            projection_matrix,
+            mesh.vertices[None, ...],
+            camera.camera_to_world,
+            camera.projection_matrix,
         )
 
-        # rasterization
         raster_out, image_space_derivatives = self.rasterize(
             vertices_clip,
-            faces,
+            mesh.faces,
             resolution=(image_height, image_width),
         )
 
-        # interpolation
-        image = self.interpolate_vertex_attributes(
-            vertex_colors,
-            raster_out,
-            faces,
-        )
+        if mesh.has_texture:
+            per_pixel_tex_coordinates = self.interpolate_attributes(
+                mesh.tex_coordinates,
+                raster_out,
+                mesh.tex_coordinate_indices,
+            )
+            image = self.sample_texture(
+                mesh.texture_image[None, ...],
+                per_pixel_tex_coordinates,
+            )
+        else:
+            image = self.interpolate_attributes(
+                mesh.vertex_colors[None, ...],
+                raster_out,
+                mesh.faces,
+            )
 
-        # anti-aliasing
-        image = self.anti_alias(
+        image = self.antialias(
             image,
             raster_out,
             vertices_clip,
-            faces,
+            mesh.faces,
+        )
+
+        # mask out background
+        # TODO: allow selecting background color
+        mask = raster_out[..., 3:4] > 0.0
+        image = torch.where(
+            mask,
+            image,
+            torch.zeros_like(image),
         )
 
         # flip images vertically
@@ -111,6 +121,10 @@ class Renderer:
         # Refer to: https://github.com/NVlabs/nvdiffrast/issues/44
         image = torch.flip(image, dims=[1])
         image_space_derivatives = torch.flip(image_space_derivatives, dims=[1])
+
+        # truncate batch dimension
+        image = image[0, ...]
+        image_space_derivatives = image_space_derivatives[0, ...]
 
         return image, image_space_derivatives
 
@@ -166,17 +180,18 @@ class Renderer:
 
     @jaxtyped
     @typechecked
-    def interpolate_vertex_attributes(
+    def interpolate_attributes(
         self,
-        vertex_attributes: Float[Tensor, "batch_size num_vertex attribute_dim"],
+        attributes: Float[Tensor, "* attribute_dim"],
         rasterization_output: Float[Tensor, "batch_size image_height image_width 4"],
         faces: Int[Tensor, "num_face 3"],
-    ):
+    ) -> Float[Tensor, "batch_size image_height image_width attribute_dim"]:
         """
-        Interpolates per-vertex attributes.
+        Interpolates attributes given triangle indices.
         """
+
         result, _ = dr.interpolate(
-            vertex_attributes,
+            attributes,
             rasterization_output,
             faces,
         )
@@ -185,7 +200,25 @@ class Renderer:
 
     @jaxtyped
     @typechecked
-    def anti_alias(
+    def sample_texture(
+        self,
+        texture_image: Float[Tensor, "batch_size texture_height texture_width 3"],
+        tex_coordinates: Float[Tensor, "batch_size image_height image_width 2"],
+    ) -> Float[Tensor, "batch_size image_height image_width 3"]:
+        """
+        Samples texture image given per-pixel texture coordinates.
+        """
+
+        image = dr.texture(
+            texture_image,
+            tex_coordinates,
+            filter_mode="linear",
+        )
+        return image
+
+    @jaxtyped
+    @typechecked
+    def antialias(
         self,
         image: Float[Tensor, "batch_size image_height image_width 3"],
         rasterization_output: Float[Tensor, "batch_size image_height image_width 4"],

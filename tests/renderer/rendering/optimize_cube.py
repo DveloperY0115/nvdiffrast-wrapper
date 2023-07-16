@@ -44,30 +44,33 @@ def optimize_cube(out_dir: Path, device: torch.device) -> None:
     data_dir = Path(__file__).parents[2] / "data/renderer/cube"
     path = data_dir / "cube_c.npz"
     faces, vertices, vertex_colors = load_cube(path)
+
+    # create GT mesh
     mesh_gt = Mesh(
-        vertices[None],
+        vertices,
         faces,
-        vertex_colors[None],
+        vertex_colors,
         device,
     )
 
     # initialize renderer
     renderer = Renderer(False, device)
 
-    # initialize optimization process
+    # create mesh to optimize
     vertices_optim = vertices.clone() + torch.from_numpy(
         np.random.uniform(-0.5, 0.5, size=vertices.shape)
     ).type(torch.float32)
     vertex_colors_optim = torch.rand_like(vertex_colors)
     mesh_optim = Mesh(
-        vertices_optim[None],
+        vertices_optim,
         faces,
-        vertex_colors_optim[None],
+        vertex_colors_optim,
         device,
     )
     mesh_optim.vertices.requires_grad = True
     mesh_optim.vertex_colors.requires_grad = True
 
+    # configure optimizer and scheduler
     optimizer = torch.optim.Adam(
         [mesh_optim.vertices, mesh_optim.vertex_colors],
         lr=1e-2,
@@ -144,7 +147,6 @@ def optimize_cube(out_dir: Path, device: torch.device) -> None:
         )
         with torch.no_grad():
             vis_image, _ = renderer.render(mesh_optim, vis_camera)
-            vis_image = vis_image[0, ...]
 
         # save video
         vis_image = torch.clamp(vis_image, 0.0, 1.0)

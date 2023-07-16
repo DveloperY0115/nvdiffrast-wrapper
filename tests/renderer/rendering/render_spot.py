@@ -1,7 +1,8 @@
 """
-render_cube.py
+render_spot.py
 
-A script for testing the renderer by rendering a simple cube.
+A script for testing the renderer by rendering the Spot.
+Source: http://www.cs.cmu.edu/~kmcrane/Projects/ModelRepository/index.html#spot
 """
 
 from pathlib import Path
@@ -16,27 +17,21 @@ from src.geometry.mesh import Mesh
 from src.renderer.cameras.perspective_camera import PerspectiveCamera
 from src.renderer.cameras.utils import (
     compute_lookat_matrix,
-    sample_trajectory_along_upper_hemisphere
+    sample_trajectory_along_upper_hemisphere,
 )
 from src.renderer.renderer import Renderer
-from tests.renderer.rendering.utils import load_cube
+from src.utils.io.geometry.obj import load_obj
 
 
 @jaxtyped
 @typechecked
-def render_cube(out_dir: Path, device: torch.device) -> None:
-    """A test case that loads and renders a cube"""
+def render_spot(out_dir: Path, device: torch.device) -> None:
+    """A test cases that loads and renders the Spot"""
 
-    # load cube
-    data_dir = Path(__file__).parents[2] / "data/renderer/cube"
-    path = data_dir / "cube_c.npz"
-    faces, vertices, vertex_colors = load_cube(path)
-    mesh = Mesh(
-        vertices,
-        faces,
-        vertex_colors,
-        device,
-    )
+    # load mesh
+    data_dir = Path(__file__).parents[2] / "data/renderer/spot"
+    path = data_dir / "spot_triangulated.obj"
+    mesh = load_obj(path, device)
 
     # initialize renderer
     use_opengl = False
@@ -44,7 +39,7 @@ def render_cube(out_dir: Path, device: torch.device) -> None:
 
     positions = sample_trajectory_along_upper_hemisphere(
         radius=2.0,
-        elevation=np.pi / 4,
+        elevation=np.pi / 6,
         num_step=1000,
     )
 
@@ -63,7 +58,7 @@ def render_cube(out_dir: Path, device: torch.device) -> None:
         aspect_ratio = 1.0
         field_of_view = 60.0
         near = 1e-1
-        far = 6.0
+        far = 100.0
         image_height = 400
         image_width = 400
         camera_pose = compute_lookat_matrix(

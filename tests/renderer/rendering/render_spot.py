@@ -13,7 +13,6 @@ import numpy as np
 import torch
 from typeguard import typechecked
 
-from src.geometry.mesh import Mesh
 from src.renderer.cameras.perspective_camera import PerspectiveCamera
 from src.renderer.cameras.utils import (
     compute_lookat_matrix,

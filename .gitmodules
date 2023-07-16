@@ -1,3 +1,4 @@
 [submodule "dependencies/nvdiffrast"]
 	path = dependencies/nvdiffrast
 	url = https://github.com/NVlabs/nvdiffrast
+	ignore = untracked

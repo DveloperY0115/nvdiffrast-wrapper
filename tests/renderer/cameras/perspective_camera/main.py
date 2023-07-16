@@ -19,6 +19,9 @@ class PerspectiveCameraTestConfig(TestConfig):
 
     _target: Type = field(default_factory=lambda: PerspectiveCameraTest)
 
+    test_name: str = "renderer/cameras"
+    """The name of the test"""
+
 
 class PerspectiveCameraTest(Test):
     """The perspective camera test class"""

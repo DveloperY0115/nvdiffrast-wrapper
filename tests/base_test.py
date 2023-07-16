@@ -19,9 +19,10 @@ class TestConfig(InstantiateConfig):
     """The configuration of a test"""
 
     _target: Type = field(default_factory=lambda: Test)
+
     output_root: Path = Path("output/test")
     """The root directory of outputs"""
-    test_name: str = "base_test"
+    test_name: str = None
     """The name of the test"""
     test_cases: List[Callable] = field(default_factory=lambda: [])
     """The list of test cases to run"""

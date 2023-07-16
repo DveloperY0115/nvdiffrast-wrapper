@@ -92,6 +92,7 @@ class Renderer:
                 per_pixel_tex_coordinates,
             )
         else:
+            assert mesh.vertex_colors is not None
             image = self.interpolate_attributes(
                 mesh.vertex_colors[None, ...],
                 raster_out,
